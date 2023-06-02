@@ -1,12 +1,14 @@
 package com.flexpag.microservicereports.interfaces;
 
-import java.sql.ResultSet;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.sql.Date;
 import java.sql.SQLException;
-import java.time.LocalDate;
 
 public interface FileReportsService {
 
 
-    ResultSet generateFile(String statusEnum, LocalDate date, String paymentType, Long clientId, String reportType) throws SQLException, ClassNotFoundException;
+    ByteArrayOutputStream getFileName(String statusEnum, Date date, String paymentType, Integer clientId) throws SQLException, ClassNotFoundException, IOException;
 
+    void generateFiles(ByteArrayOutputStream byteArrayOutputStream);
 }

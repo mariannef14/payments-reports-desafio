@@ -2,83 +2,104 @@ package com.flexpag.microservicereports.service;
 
 import com.flexpag.microservicereports.config.ConnectionJdbc;
 import com.flexpag.microservicereports.interfaces.FileReportsService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.time.LocalDate;
+import java.sql.Date;
 
 @Service
+@RequiredArgsConstructor
 public class TransactionReportsService implements FileReportsService {
 
+    private final FileService fileService;
 
     @Override
-    public ResultSet generateFile(String statusEnum, LocalDate date, String paymentType, Long clientId, String reportType) throws SQLException, ClassNotFoundException {
+    public ByteArrayOutputStream getFileName(String statusEnum, Date date, String paymentType, Integer clientId) throws SQLException, ClassNotFoundException, IOException {
         Connection connection = ConnectionJdbc.conexao();
 
-        // StringBuilder query = new StringBuilder("select * from transaction where ");
-        // if(statusEnum != null){
-        //     query.append("status = " + statusEnum + " ");
-        // }if(paymentType != null){
-        //     query.append("and payment_type = " + paymentType + "'");
-        // }if(clientId != null){
-        //     //SELECT * from paymentsdb.transaction, paymentsdb.purchase, paymentsdb.purchase_client where paymentsdb.transaction.purchase_id = paymentsdb.purchase.id
-        //     // and 
-        //     // paymentsdb.purchase.id = paymentsdb.purchase_client.purchase_id
-        //     // and 
-        //     // paymentsdb.client.id = paymentsdb.purchase_client.client_id;
-        //     query.append("and purchase_id = purchase.id and purchase.client.id = client.id " + clientId);
-        
+        StringBuilder query = new StringBuilder("SELECT t.id, t.status, t.payment_type, pc.client_id, " +
+                                                "t.purchase_id, t.create_at FROM transaction t");
+        query.append(" JOIN purchase p ON t.purchase_id = p.id");
+        query.append(" JOIN purchase_client pc ON p.id = pc.purchase_id WHERE 1 = 1");
 
-        // PreparedStatement stmt = connection.prepareStatement(query.toString());
-
-        StringBuilder query = new StringBuilder("SELECT t.status, t.payment_type, p.client_id ");
-        query.append("FROM transaction t ");
-        query.append("JOIN purchase p ON t.purchase_id = p.id ");
-        query.append("JOIN purchase_client pc ON p.id = pc.purchase_id ");
-        query.append("WHERE");
-
-          if(statusEnum != null){
-            query.append(" t.status =: statusEnum");
-        // if (statusEnum != null) {
-        //     query.append(" t.status =:  ");
-        // }
-        // if (paymentType != null) {
-        //     query.append("AND t.payment_type = ? ");
-        // }
-        // if (clientId != null) {
-        //     query.append("AND p.client_id = ? ");
+        if(statusEnum != null){
+            query.append(" AND status = ?");
+        }if(date != null){
+            query.append(" AND t.create_at = ?");
         }
-    
-        PreparedStatement stmt = connection.prepareStatement(query.toString());
-    
-        int parameterIndex = 1;
-    
-        if (statusEnum != null) {
-            stmt.setString(parameterIndex, statusEnum);
-           // parameterIndex++;
-        }
-        // if (paymentType != null) {
-        //     stmt.setString(parameterIndex, paymentType);
-        //     parameterIndex++;
-        // }
-        // if (clientId != null) {
-        //     stmt.setLong(parameterIndex, clientId);
-        // }
-
-        ResultSet resultado = stmt.executeQuery(query.toString());
-        System.out.println(resultado);
-
-        while(resultado.next()){
-            System.out.println(resultado.getString("status"));
+        if(paymentType != null){
+            query.append(" AND payments_type = ?");
+        }if(clientId != null){
+            query.append(" AND client_id = ?");
         }
 
-        // stmt.close();
-        // resultado.close();
-        // connection.close();
+        try {
+            PreparedStatement preparedStatement = connection.prepareStatement(query.toString());
 
-        return resultado;
+            int parameterIndex = 1;
+
+            if(statusEnum != null){
+                preparedStatement.setString(parameterIndex, statusEnum);
+                parameterIndex++;
+            }if(date != null){
+                preparedStatement.setDate(parameterIndex, date);
+                parameterIndex++;
+            }if(paymentType != null){
+                preparedStatement.setString(parameterIndex, paymentType);
+                parameterIndex++;
+            }if(clientId != null){
+                preparedStatement.setInt(parameterIndex, clientId);
+            }
+
+            ResultSet result = preparedStatement.executeQuery();
+
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+
+            while (result.next()) {
+
+                byte[] transactionId  = result.getBytes("id");
+                byte[] status = result.getBytes("status");
+                byte[] payment = result.getBytes("payment_type");
+                byte[] purchaseId = result.getBytes("client_id");
+                byte[] clientIdd = result.getBytes("purchase_id");
+                byte[] createAt = result.getBytes("create_at");
+
+                outputStream.write(transactionId);
+                outputStream.write(',');
+                outputStream.write(status);
+                outputStream.write(',');
+                outputStream.write(payment);
+                outputStream.write(',');
+                outputStream.write(purchaseId);
+                outputStream.write(',');
+                outputStream.write(clientIdd);
+                outputStream.write(',');
+                outputStream.write(createAt);
+                outputStream.write('\n');
+
+            }
+
+            result.close();
+            outputStream.close();
+            connection.close();
+
+            return outputStream;
+
+        }catch (IOException ex){
+            throw new IOException();
+        }
+
+
+    }
+
+    @Override
+    public void generateFiles(ByteArrayOutputStream byteArrayOutputStream) {
+        fileService.generateFileTransaction(byteArrayOutputStream);
     }
 }
