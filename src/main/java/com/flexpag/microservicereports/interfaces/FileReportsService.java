@@ -7,6 +7,6 @@ import java.time.LocalDate;
 public interface FileReportsService {
 
 
-    ResultSet generateFile(String StatusEnum, LocalDate date, String PaymentTypeEnum, Long ClientId, String reportTypeEnum) throws SQLException;
+    ResultSet generateFile(String statusEnum, LocalDate date, String paymentType, Long clientId, String reportType) throws SQLException, ClassNotFoundException;
 
 }

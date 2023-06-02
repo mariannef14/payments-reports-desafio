@@ -22,7 +22,7 @@ public class ReportsController {
                                                     @RequestParam(required = false) LocalDate date,
                                                     @RequestParam(required = false) String paymentType,
                                                     @RequestParam(required = false) Long clientId,
-                                                    @RequestParam(required = true) String type) throws SQLException {
+                                                    @RequestParam(required = true) String type) throws SQLException, ClassNotFoundException {
 
         return ResponseEntity.ok(fileServiceFactory.getService(type).generateFile(status, date, paymentType,clientId, type));
     }
